@@ -1,18 +1,11 @@
-import sys
-import os.path
-print sys.path
-
-sys.path.append('/Users/Asia/becquerel-master/')
-sys.path.append('/Users/Asia/becquerel-master/becquerel')
-sys.path.append('/Users/Asia/becquerel-master/becquerel/core')
-
-#sys.path.remove('/Users/Asia/becquerel-master/')
-#sys.path.remove('/Users/Asia/becquerel-master/becquerel')
-#sys.path.remove('/Users/Asia/becquerel-master/becquerel/core')
+#Plotting functions
 
 import matplotlib.pyplot as plt
+import sys
+sys.path.append('/home/anp/repos/becquerel')
+sys.path.append('/home/anp/repos')
 from becquerel import Spectrum
-from becquerel import EnergyCalBase
+#from becquerel import EnergyCalBase
 import numpy as np
 import lmfit as lmfit
 
@@ -63,7 +56,7 @@ def plotfwhmgaptime(x_vals, y_vals, y_err):
     x_vals_2 = []
     y_vals_1 = []
     y_vals_2 = []
-    
+
     #y_err = int(y_err)
     plt.plot(x_vals, y_vals)
     plt.errorbar(x_vals, y_vals, xerr=0, yerr=y_err)
@@ -73,10 +66,10 @@ def plotfwhmgaptime(x_vals, y_vals, y_err):
     plt.show()
 
 def plotfwhm(outputfilename):
-    
+
     #plot FWHM vs rise time
     plt.figure(figsize=(10, 5))
-    
+
     datarisetime = np.array([], dtype=np.float)
     dataenergy = np.array([], dtype=np.float)
     dataFWHM = np.array([], dtype=np.float)
@@ -90,7 +83,7 @@ def plotfwhm(outputfilename):
     dataerror = df[8]
     plt.plot(datarisetime, dataFWHM, 'bo')
     plt.errorbar(datarisetime, dataFWHM, xerr=0, yerr=dataerror)
-    
+
     datarisetime2 = np.array([], dtype=np.float)
     dataenergy2 = np.array([], dtype=np.float)
     dataFWHM2 = np.array([], dtype=np.float)
@@ -106,9 +99,9 @@ def plotfwhm(outputfilename):
     plt.errorbar(datarisetime2, dataFWHM2, xerr=0, yerr=dataerror2)
     ax = plt.gca()
     ax.set_xscale('log')
-    
+
     plt.show()
-    
+
     outputfilename.close()
 
 def main():

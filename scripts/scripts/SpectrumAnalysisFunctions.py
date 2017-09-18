@@ -1,34 +1,48 @@
+import sys
+import os.path
+print (sys.path)
+
+#sys.path.append('/Users/Asia/becquerel-master/')
+#sys.path.append('/Users/Asia/becquerel-master/becquerel')
+#sys.path.append('/Users/Asia/becquerel-master/becquerel/core')
+
+#sys.path.remove('/Users/Asia/becquerel-master/')
+#sys.path.remove('/Users/Asia/becquerel-master/becquerel')
+#sys.path.remove('/Users/Asia/becquerel-master/becquerel/core')
+
 import matplotlib.pyplot as plt
+from becquerel import Spectrum
+###from becquerel import EnergyCalBase
 import numpy as np
 import lmfit as lmfit
 
-
 def selectROI():
-    lowindex = input("ROI low index (channel #)")
+    lowindex = raw_input("ROI low index (channel #)")
+    #lowindex = 8000
     if lowindex == '':
         lowindex = 0
-    highindex = input("ROI high index (channel #)")
+    highindex = raw_input("ROI high index (channel #)")
+    #highindex = 11000
     if highindex == '':
         highindex = spec.channels(max)
     lowindex = int(lowindex)
     highindex = int(highindex)
     return lowindex, highindex
 
-
 def findpeaks(data_x, data_y, low_index, high_index):
     cut_data_y = data_y[low_index:high_index]
-    for i in range(low_index, high_index):
+    for i in range (low_index,high_index):
         if data_y[i] == max(cut_data_y):
-            centerindex = data_x[i]
-            minindex = low_index
-            maxindex = high_index
+            centerindex =  data_x[i]
+            minindex=low_index
+            maxindex=high_index
             amplitude = max(cut_data_y)
+    ROIrange = [minindex, maxindex]
     return centerindex, amplitude, minindex, maxindex
 
-
 def linearbackgroundsubtractedcounts(x_val, x_energies, y_val, ROI_low, ROI_high):
-    ch_bkg_low = (x_val > (ROI_low - 100)) & (x_val < ROI_low)
-    ch_bkg_high = (x_val > ROI_high) & (x_val < (ROI_high + 100))
+    ch_bkg_low = (x_val> (ROI_low -100)) & (x_val<ROI_low)
+    ch_bkg_high = (x_val> ROI_high) & (x_val < (ROI_high + 100))
 
     #x_val = x_energies
 
@@ -41,100 +55,73 @@ def linearbackgroundsubtractedcounts(x_val, x_energies, y_val, ROI_low, ROI_high
     m = fit[0]
     c = fit[1]
 
-    plt.axis([(ROI_low - 100), (ROI_high + 100), 0, np.amax(y_val)])
+    plt.axis([(ROI_low -100), (ROI_high + 100), 0, np.amax(y_val)])
     ax = plt.gca()
     ax.set_autoscale_on(False)
 
-    background = m * x_val + c
-    y_bkg_corr = y_val - background
+    background = m*x_val + c
+    y_bkg_corr = y_val- background
     #plt.plot(x_val, y_val)
     plt.plot(x_val, y_bkg_corr)
     plt.show()
 
     return y_bkg_corr
 
+def fitgaussian(data):
+    """Returns (height, x, width_x) the gaussian parameters of a 1D distribution found by a fit"""
+    params = moments(data)
+    errorfunction = lambda p: np.ravel(gaussian(*p)(*np.indices(data.shape)) -data)
+    p, success = optimize.leastsq(errorfunction, params)
+    print (p)
+    return p
+
+def moments(data):
+    total = data.sum()
+    X = spec.energies_kev[9690: 10000]
+    x = (X*data).sum()/total
+    Width_x = np.sqrt(np.abs(np.sum((X-x)**2*data)/np.sum(data)))
+    height = data.max()
+    return height, x, Width_x
 
 def gaussianfunction(height, center_x, width_x):
     """Returns a gaussian function with the given parameters"""
     width_x = float(width_x)
-    return lambda x: height * np.exp(-(((center_x - x)**2 / width_x)))
-
+    gaussianfunc = lambda x: height*np.exp(-(((center_x-x)**2/width_x)))
+    return gaussianfunc
 
 def calculatefwhm(x, y, peak_centroid):
-    lower_x = []
-    higher_x = []
     peak_height = max(y)
     peak_height = float(peak_height)
     peak_centroid = int(peak_centroid)
-    lower_x_hm = 0.0
-    higher_x_hm = 0.0
-    fwhm = 0.0
-
-    for i in range(0, len(x), 1):
-        if y[i] == peak_height:
-            print(i)
-            middle_index = i
-
-    lower_x = np.linspace(0, middle_index, (middle_index - 0 + 1))
-    higher_x = np.linspace(middle_index, len(x), (len(x) - middle_index + 1))
+    lower_x = x[0:peak_centroid]
     lower_x = lower_x[::-1]
-
-    for i in lower_x:
-        i = int(i)
-        if y[i] <= peak_height / 2:
-            lower_x_hm = x[i]
+    higher_x = x[peak_centroid:-1]
+    lower_x_hm = 0.0
+    high_x_hm = 0.0
+    fwhm = 0.0
+    for i in y:
+        if y[i]<= peak_height/2:
+            # lower_x_hm = x[i]
+            #print(lower_x_hm)
+            print(y[i])
             break
-    for i in higher_x:
-        i = int(i)
-        if y[i] <= peak_height / 2:
+    for i in y:
+        if y[i]<= peak_height/2:
             higher_x_hm = x[i]
+            print(higher_x_hm)
+            print(y[i])
             break
     fwhm = higher_x_hm - lower_x_hm
     print(fwhm)
     return fwhm
 
-
-def calculatefwtm(x, y, peak_centroid):
-    lower_x = []
-    higher_x = []
-    peak_height = max(y)
-    peak_height = float(peak_height)
-    peak_centroid = int(peak_centroid)
-    lower_x_hm = 0.0
-    higher_x_hm = 0.0
-    fwtm = 0.0
-
-    for i in range(0, len(x), 1):
-        if y[i] == peak_height:
-            print(i)
-            middle_index = i
-
-    lower_x = np.linspace(0, middle_index, (middle_index - 0 + 1))
-    higher_x = np.linspace(middle_index, len(x), (len(x) - middle_index + 1))
-    lower_x = lower_x[::-1]
-
-    for i in lower_x:
-        i = int(i)
-        if y[i] <= peak_height / 10:
-            lower_x_hm = x[i]
-            break
-    for i in higher_x:
-        i = int(i)
-        if y[i] <= peak_height / 10:
-            higher_x_hm = x[i]
-            break
-    fwtm = higher_x_hm - lower_x_hm
-    print(fwtm)
-    return fwtm
-
-
-def FitGaussian(x, y):
-    plt.figure(figsize=(20, 10))
+def FitGaussian(x,y):
+    plt.figure(figsize=(20,10))
 
     mod = lmfit.models.GaussianModel()
 
     pars = mod.guess(y, x=x)
-    out = mod.fit(y, pars, x=x)
+    out  = mod.fit(y, pars, x=x)
     print(out.fit_report(min_correl=0.25))
 
     plt.plot(x, y, 'bo')
@@ -142,8 +129,7 @@ def FitGaussian(x, y):
     plt.plot(x, out.best_fit, 'r-')
     plt.show()
 
-
-def FitGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma):
+def FitGaussianPeakLinearBackground(x,y,peak_amplitude, peak_centroid,peak_sigma):
 
     peak_amplitude = int(peak_amplitude)
     peak_centroid = int(peak_centroid)
@@ -152,10 +138,10 @@ def FitGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_si
     bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     pars = bkg_mod.guess(y, x=x)
 
-    gauss1 = lmfit.models.GaussianModel(prefix='g1_')
-    pars.update(gauss1.make_params())
+    gauss1  = lmfit.models.GaussianModel(prefix='g1_')
+    pars.update( gauss1.make_params())
 
-    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 200), max=(peak_centroid + 200))
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid-200), max=(peak_centroid+200))
     pars['g1_sigma'].set(peak_sigma, min=0.1)
     pars['g1_amplitude'].set(peak_amplitude, min=10)
 
@@ -172,16 +158,12 @@ def FitGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_si
     comps = out.eval_components(x=x)
 
     #print("fwhm:")
-    fit_fwhm = (out.params['g1_fwhm'].value)
-    fit_fwhm_err = (out.params['g1_fwhm'].stderr)
+    fit_fwhm = (out.params['g1_fwhm'].value )
+    fit_fwhm_err = (out.params['g1_fwhm'].stderr )
     fit_center = (out.params['g1_center'].value)
     fit_sigma = (out.params['g1_sigma'].value)
     fit_height = (out.params['g1_height'].value)
-    print("=========FIT HEIGHT=========")
-    print(fit_height)
     fit_amplitude = (out.params['g1_amplitude'].value)
-    chisqr = out.chisqr
-    redchi = out.redchi
     #print(fit_fwhm)
     #print(fit_fwhm_err)
     # print(out.params)
@@ -194,9 +176,9 @@ def FitGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_si
 
     print(out.fit_report(min_correl=0.5))
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
-    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2 * out.params['g1_fwhm'].value), 0, (1.2 * out.params['g1_height'].value)])
+    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     ax = plt.gca()
     ax.set_autoscale_on(False)
 
@@ -207,7 +189,7 @@ def FitGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_si
     #plt.plot(x, comps['g2_'], 'b--')
     plt.plot(x, comps['lin_'], 'g--')
 
-    myfile = open('testfile.txt', 'w')
+    myfile = open('testfile.txt','w')
     myfile.write(out.fit_report())
     myfile.close()
 
@@ -216,10 +198,9 @@ def FitGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_si
     #   plt.plot(x, out.best_fit, 'r-')
     plt.show()
 
-    return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude, chisqr, redchi
+    return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
 
-
-def FitLorentzianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma):
+def FitLorentzianPeakLinearBackground(x,y,peak_amplitude, peak_centroid, peak_sigma):
 
     peak_amplitude = int(peak_amplitude)
     peak_centroid = int(peak_centroid)
@@ -228,10 +209,10 @@ def FitLorentzianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_
     bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     pars = bkg_mod.guess(y, x=x)
 
-    gauss1 = lmfit.models.LorentzianModel(prefix='g1_')
-    pars.update(gauss1.make_params())
+    gauss1  = lmfit.models.LorentzianModel(prefix='g1_')
+    pars.update( gauss1.make_params())
 
-    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 200), max=(peak_centroid + 200))
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid-200), max=(peak_centroid+200))
     pars['g1_sigma'].set(peak_sigma, min=0.1)
     pars['g1_amplitude'].set(peak_amplitude, min=10)
 
@@ -241,8 +222,8 @@ def FitLorentzianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_
 
     comps = out.eval_components(x=x)
 
-    fit_fwhm = (out.params['g1_fwhm'].value)
-    fit_fwhm_err = (out.params['g1_fwhm'].stderr)
+    fit_fwhm = (out.params['g1_fwhm'].value )
+    fit_fwhm_err = (out.params['g1_fwhm'].stderr )
     fit_center = (out.params['g1_center'].value)
     fit_sigma = (out.params['g1_sigma'].value)
     fit_height = (out.params['g1_height'].value)
@@ -251,9 +232,9 @@ def FitLorentzianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_
 
     print(out.fit_report(min_correl=0.5))
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
-    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2 * out.params['g1_fwhm'].value), 0, (1.2 * out.params['g1_height'].value)])
+    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     ax = plt.gca()
     ax.set_autoscale_on(False)
 
@@ -267,8 +248,7 @@ def FitLorentzianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_
 
     return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
 
-
-def FitVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma, peak_gamma):
+def FitVoigtPeakLinearBackground(x,y,peak_amplitude, peak_centroid, peak_sigma, peak_gamma):
 
     peak_amplitude = int(peak_amplitude)
     peak_centroid = int(peak_centroid)
@@ -278,10 +258,10 @@ def FitVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma
     bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     pars = bkg_mod.guess(y, x=x)
 
-    gauss1 = lmfit.models.VoigtModel(prefix='g1_')
-    pars.update(gauss1.make_params())
+    gauss1  = lmfit.models.VoigtModel(prefix='g1_')
+    pars.update( gauss1.make_params())
 
-    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 200), max=(peak_centroid + 200))
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid-200), max=(peak_centroid+200))
     pars['g1_sigma'].set(peak_sigma, min=0.1)
     pars['g1_amplitude'].set(peak_amplitude, min=10)
     pars['g1_gamma'].set(peak_gamma)
@@ -292,8 +272,8 @@ def FitVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma
 
     comps = out.eval_components(x=x)
 
-    fit_fwhm = (out.params['g1_fwhm'].value)
-    fit_fwhm_err = (out.params['g1_fwhm'].stderr)
+    fit_fwhm = (out.params['g1_fwhm'].value )
+    fit_fwhm_err = (out.params['g1_fwhm'].stderr )
     fit_center = (out.params['g1_center'].value)
     fit_sigma = (out.params['g1_sigma'].value)
     fit_height = (out.params['g1_height'].value)
@@ -302,9 +282,9 @@ def FitVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma
 
     print(out.fit_report(min_correl=0.5))
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
-    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2 * out.params['g1_fwhm'].value), 0, (1.2 * out.params['g1_height'].value)])
+    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     ax = plt.gca()
     ax.set_autoscale_on(False)
 
@@ -314,7 +294,7 @@ def FitVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma
     plt.plot(x, comps['g1_'], 'b--')
     plt.plot(x, comps['lin_'], 'g--')
 
-    myfile = open('testfile.txt', 'w')
+    myfile = open('testfile.txt','w')
     myfile.write(out.fit_report())
     myfile.close()
 
@@ -322,16 +302,20 @@ def FitVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma
 
     return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
 
+def FitPseudoVoigtPeakLinearBackground(x,y,peak_amplitude, peak_centroid, peak_sigma, peak_beta):
 
-def FitPseudoVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma, peak_beta):
+    gaussian_amplitude = int(peak_amplitude)
+    gaussian_centroid = int(peak_centroid)
+    gaussian_sigma = int(peak_sigma)
+    gaussian_beta = int(peak_beta)
 
     bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     pars = bkg_mod.guess(y, x=x)
 
-    gauss1 = lmfit.models.PseudoVoigtModel(prefix='g1')
-    pars.update(gauss1.make_params())
+    gauss1  = lmfit.models.PseudoVoigtModel(prefix='g1_')
+    pars.update( gauss1.make_params())
 
-    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 200), max=(peak_centroid + 200))
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid-200), max=(peak_centroid+200))
     pars['g1_sigma'].set(peak_sigma, min=0.1)
     pars['g1_amplitude'].set(peak_amplitude, min=10)
 
@@ -342,8 +326,8 @@ def FitPseudoVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak
     comps = out.eval_components(x=x)
 
     print("fwhm:")
-    fit_fwhm = (out.params['g1_fwhm'].value)
-    fit_fwhm_err = (out.params['g1_fwhm'].stderr)
+    fit_fwhm = (out.params['g1_fwhm'].value )
+    fit_fwhm_err = (out.params['g1_fwhm'].stderr )
     fit_center = (out.params['g1_center'].value)
     fit_sigma = (out.params['g1_sigma'].value)
     #fit_height = (out.params['g1_height'].value)
@@ -352,7 +336,7 @@ def FitPseudoVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak
 
     print(out.fit_report(min_correl=0.5))
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
     #plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     #ax = plt.gca()
@@ -364,7 +348,7 @@ def FitPseudoVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak
     plt.plot(x, comps['g1_'], 'b--')
     plt.plot(x, comps['lin_'], 'g--')
 
-    myfile = open('testfile.txt', 'w')
+    myfile = open('testfile.txt','w')
     myfile.write(out.fit_report())
     myfile.close()
 
@@ -373,11 +357,9 @@ def FitPseudoVoigtPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak
     #   plt.plot(x, out.best_fit, 'r-')
     plt.show()
 
-# return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
+#return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
 
-
-def FitSkewedGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid,
-                                          peak_sigma, peak_gamma):
+def FitSkewedGaussianPeakLinearBackground(x,y,peak_amplitude, peak_centroid, peak_sigma, peak_gamma):
 
     peak_amplitude = int(peak_amplitude)
     peak_centroid = int(peak_centroid)
@@ -387,10 +369,10 @@ def FitSkewedGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid,
     bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     pars = bkg_mod.guess(y, x=x)
 
-    skewedgauss1 = lmfit.models.SkewedGaussianModel(prefix='g1_')
+    skewedgauss1  = lmfit.models.SkewedGaussianModel(prefix='g1_')
     pars.update(skewedgauss1.make_params())
 
-    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 200), max=(peak_centroid + 200))
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid-200), max=(peak_centroid+200))
     pars['g1_sigma'].set(peak_sigma, min=0)
     pars['g1_amplitude'].set(peak_amplitude, min=1)
     pars['g1_gamma'].set(peak_gamma)
@@ -404,18 +386,7 @@ def FitSkewedGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid,
     print(out.params)
     print(out.fit_report(min_correl=0.5))
 
-#    g1_fwhm = (out.params['g1_fwhm'].value)
-#    g1_fwhm_err = (out.params['g1_fwhm'].stderr)
-    g1_center = (out.params['g1_center'].value)
-    g1_sigma = (out.params['g1_sigma'].value)
-#    g1_height = (out.params['g1_height'].value)
-    g1_amplitude = (out.params['g1_amplitude'].value)
-    g1_gamma = (out.params['g1_gamma'].value)
-
-    chisqr = out.chisqr
-    redchi = out.redchi
-
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
     #plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     #ax = plt.gca()
@@ -430,20 +401,19 @@ def FitSkewedGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid,
 
 #plt.plot(x, out.best_fit, 'ro')
 #    plt.show()
-    fwhm = calculatefwhm(x, out.best_fit, (out.params['g1_center'].value))
-    fwtm = calculatefwtm(x, out.best_fit, (out.params['g1_center'].value))
+    calculatefwhm(x, out.best_fit, (out.params['g1_center'].value))
 
+    print("HEREEEEE!")
     print("FWHM")
     print(fwhm)
-    print("FWTM")
-    print(fwtm)
     #   plt.plot(x, y, 'bo')
     #   plt.plot(x, out.init_fit, 'k--')
     #   plt.plot(x, out.best_fit, 'r-')
     plt.show()
-    return fwhm, g1_gamma, g1_center, g1_sigma, g1_amplitude, chisqr, redchi
 
-def FitExponentialGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma, peak_gamma):
+#return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
+
+def FitExponentialGaussianPeakLinearBackground(x,y,peak_amplitude, peak_centroid, peak_sigma, peak_gamma):
 
     peak_amplitude = int(peak_amplitude)
     peak_centroid = int(peak_centroid)
@@ -453,12 +423,12 @@ def FitExponentialGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centro
     #bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     #pars = bkg_mod.guess(y, x=x)
 
-    skewedgauss1 = lmfit.models.ExponentialGaussianModel(prefix='g1_')
+    skewedgauss1  = lmfit.models.ExponentialGaussianModel(prefix='g1_')
     #pars.update( skewedgauss1.make_params())
     mod = skewedgauss1
     pars = mod.guess(y, x=x)
 
-    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 20), max=(peak_centroid + 20))
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid-20), max=(peak_centroid+20))
     pars['g1_sigma'].set(peak_sigma, min=0)
     pars['g1_amplitude'].set(peak_amplitude, min=1)
     pars['g1_gamma'].set(peak_gamma)
@@ -473,7 +443,7 @@ def FitExponentialGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centro
 
     print(out.fit_report(min_correl=0.5))
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
     #plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     #ax = plt.gca()
@@ -486,7 +456,7 @@ def FitExponentialGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centro
     #plt.plot(x, comps['g2_'], 'b--')
     #plt.plot(x, comps['lin_'], 'k--')
 
-    myfile = open('testfile.txt', 'w')
+    myfile = open('testfile.txt','w')
     myfile.write(out.fit_report())
     myfile.close()
 
@@ -497,8 +467,7 @@ def FitExponentialGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centro
 
 #return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
 
-
-def FitGaussianSkewedGaussianLinearBackground(x, y, gaussian_amplitude, gaussian_centroid, gaussian_sigma, skewed_gaussian_amplitude, skewed_gaussian_centroid, skewed_gaussian_sigma, skewed_gaussian_gamma):
+def FitGaussianSkewedGaussianLinearBackground(x,y,gaussian_amplitude, gaussian_centroid, gaussian_sigma, skewed_gaussian_amplitude, skewed_gaussian_centroid, skewed_gaussian_sigma, skewed_gaussian_gamma):
 
     gaussian_amplitude = int(gaussian_amplitude)
     gaussian_centroid = int(gaussian_centroid)
@@ -511,20 +480,21 @@ def FitGaussianSkewedGaussianLinearBackground(x, y, gaussian_amplitude, gaussian
     bkg_mod = lmfit.models.LinearModel(prefix='lin_')
     pars = bkg_mod.guess(y, x=x)
 
-    gauss1 = lmfit.models.GaussianModel(prefix='g1_')
-    pars.update(gauss1.make_params())
+    gauss1  = lmfit.models.GaussianModel(prefix='g1_')
+    pars.update( gauss1.make_params())
 
-    pars['g1_center'].set((gaussian_centroid), min=(gaussian_centroid - 200), max=(gaussian_centroid + 200))
+    pars['g1_center'].set((gaussian_centroid), min=(gaussian_centroid-200), max=(gaussian_centroid+200))
     pars['g1_sigma'].set(gaussian_sigma, min=0.1)
     pars['g1_amplitude'].set(gaussian_amplitude, min=10)
 
-    skewedgauss1 = lmfit.models.SkewedGaussianModel(prefix='sg1_')
-    pars.update(skewedgauss1.make_params())
+    skewedgauss1  = lmfit.models.SkewedGaussianModel(prefix='sg1_')
+    pars.update( skewedgauss1.make_params())
 
-    pars['sg1_center'].set((skewed_gaussian_centroid), min=(skewed_gaussian_centroid - 200), max=(skewed_gaussian_centroid + 200))
+    pars['sg1_center'].set((skewed_gaussian_centroid), min=(skewed_gaussian_centroid-200), max=(skewed_gaussian_centroid+200))
     pars['sg1_sigma'].set(skewed_gaussian_sigma, min=0)
     pars['sg1_amplitude'].set(skewed_gaussian_amplitude, min=1)
     pars['sg1_gamma'].set(skewed_gaussian_gamma)
+
 
     mod = gauss1 + skewedgauss1 + bkg_mod
     init = mod.eval(pars, x=x)
@@ -532,8 +502,8 @@ def FitGaussianSkewedGaussianLinearBackground(x, y, gaussian_amplitude, gaussian
 
     comps = out.eval_components(x=x)
 
-    fit_fwhm = (out.params['g1_fwhm'].value)
-    fit_fwhm_err = (out.params['g1_fwhm'].stderr)
+    fit_fwhm = (out.params['g1_fwhm'].value )
+    fit_fwhm_err = (out.params['g1_fwhm'].stderr )
     fit_center = (out.params['g1_center'].value)
     fit_sigma = (out.params['g1_sigma'].value)
     fit_height = (out.params['g1_height'].value)
@@ -542,9 +512,9 @@ def FitGaussianSkewedGaussianLinearBackground(x, y, gaussian_amplitude, gaussian
 
     print(out.fit_report(min_correl=0.5))
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10,5))
 
-    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2 * out.params['g1_fwhm'].value), 0, (1.2 * out.params['g1_height'].value)])
+    plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
     ax = plt.gca()
     ax.set_autoscale_on(False)
 
@@ -556,7 +526,7 @@ def FitGaussianSkewedGaussianLinearBackground(x, y, gaussian_amplitude, gaussian
     #plt.plot(x, comps['g2_'], 'b--')
     plt.plot(x, comps['lin_'], 'k--')
 
-    myfile = open('testfile.txt', 'w')
+    myfile = open('testfile.txt','w')
     myfile.write(out.fit_report())
     myfile.close()
 
@@ -565,11 +535,9 @@ def FitGaussianSkewedGaussianLinearBackground(x, y, gaussian_amplitude, gaussian
     #   plt.plot(x, out.best_fit, 'r-')
     plt.show()
 
-
 #return fit_fwhm, fit_fwhm_err, fit_center, fit_sigma, fit_height, fit_amplitude
 def main():
-    print("SpectrumAnalysisFunctions")
-
+    print ("SpectrumAnalysisFunctions")
 
 if __name__ == "__main__":
     main()

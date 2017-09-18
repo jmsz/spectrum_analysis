@@ -1,34 +1,21 @@
 [[Model]]
-    (Model(pvoigt, prefix='g1_') + Model(linear, prefix='lin_'))
+    (Model(gaussian, prefix='g1_') + Model(linear, prefix='lin_'))
 [[Fit Statistics]]
-    # function evals   = 214
-    # data points      = 200
-    # variables        = 6
-    chi-square         = 18794.258
-    reduced chi-square = 96.878
-    Akaike info crit   = 920.598
-    Bayesian info crit = 940.388
+    # function evals   = 51
+    # data points      = 500
+    # variables        = 5
+    chi-square         = 35686.501
+    reduced chi-square = 72.094
+    Akaike info crit   = 2143.960
+    Bayesian info crit = 2165.033
 [[Variables]]
-    lin_slope:      -4.57715524 +/- 0.355875 (7.78%) (init= 5.648345)
-    lin_intercept:   3041.51106 +/- 235.2233 (7.73%) (init=-3755.687)
-    g1_amplitude:    2144.39177 +/- 191.2385 (8.92%) (init= 217)
-    g1_sigma:        2.36918573 +/- 0.088638 (3.74%) (init= 1)
-    g1_center:       678.048812 +/- 0.023023 (0.00%) (init= 678.279)
-    g1_fraction:     1.18567680 +/- 0.056693 (4.78%) (init= 0.5)
-    g1_fwhm:         4.73837147 +/- 0.177276 (3.74%)  == '2.0000000*g1_sigma'
+    lin_intercept:  -0.16355874 +/- 28.04546 (17147.03%) (init=-280.4164)
+    lin_slope:       0.00068250 +/- 0.039341 (5764.25%) (init= 0.4606835)
+    g1_sigma:        0.67944811 +/- 0.002094 (0.31%) (init= 1)
+    g1_center:       713.815698 +/- 0.002053 (0.00%) (init= 713)
+    g1_amplitude:    1595.91948 +/- 4.423113 (0.28%) (init= 979)
+    g1_fwhm:         1.59997800 +/- 0.004931 (0.31%)  == '2.3548200*g1_sigma'
+    g1_height:       937.054320 +/- 2.468168 (0.26%)  == '0.3989423*g1_amplitude/max(1.e-15, g1_sigma)'
 [[Correlations]] (unreported correlations are <  0.100)
-    C(lin_slope, lin_intercept)  = -1.000 
-    C(g1_amplitude, g1_fraction)  =  0.911 
-    C(g1_amplitude, g1_sigma)    =  0.895 
-    C(lin_slope, g1_amplitude)   = -0.732 
-    C(lin_intercept, g1_amplitude)  =  0.719 
-    C(lin_slope, g1_sigma)       = -0.703 
-    C(lin_intercept, g1_sigma)   =  0.692 
-    C(g1_sigma, g1_fraction)     =  0.658 
-    C(lin_intercept, g1_center)  =  0.639 
-    C(lin_slope, g1_center)      = -0.639 
-    C(lin_slope, g1_fraction)    = -0.554 
-    C(lin_intercept, g1_fraction)  =  0.540 
-    C(g1_amplitude, g1_center)   =  0.449 
-    C(g1_sigma, g1_center)       =  0.426 
-    C(g1_center, g1_fraction)    =  0.350 
+    C(lin_intercept, lin_slope)  = -1.000 
+    C(g1_sigma, g1_amplitude)    =  0.600 
