@@ -10,12 +10,13 @@ def selectROI():
     highindex = input("ROI high index (channel #)")
     if highindex == '':
         highindex = spec.channels(max)
-    lowindex = int(lowindex)
-    highindex = int(highindex)
+    lowindex = int(lowindex)*100
+    highindex = int(highindex)*100
     return lowindex, highindex
 
 
 def findpeaks(data_x, data_y, low_index, high_index):
+
     cut_data_y = data_y[low_index:high_index]
     for i in range(low_index, high_index):
         if data_y[i] == max(cut_data_y):
@@ -79,11 +80,28 @@ def calculatefwhm(x, y, peak_centroid):
     higher_x = np.linspace(middle_index, len(x), (len(x) - middle_index + 1))
     lower_x = lower_x[::-1]
 
-    for i in lower_x:
-        i = int(i)
-        if y[i] <= peak_height / 2:
-            lower_x_hm = x[i]
-            break
+    if len(lower_x) <= 2:
+        return 0
+    if len(higher_x) <= 2:
+        return 0
+    else:
+        for i in lower_x:
+            if i == lower_x[-2]:
+                return 0
+            else:
+                i = int(i)
+                if y[i] <= peak_height / 2:
+                    lower_x_hm = x[i]
+                    break
+        for i in higher_x:
+            if i == higher_x[-2]:
+                return 0
+            else:
+                i = int(i)
+                if y[i] <= peak_height / 2:
+                    higher_x_hm = x[i]
+                    break
+
     for i in higher_x:
         i = int(i)
         if y[i] <= peak_height / 2:
@@ -113,19 +131,33 @@ def calculatefwtm(x, y, peak_centroid):
     higher_x = np.linspace(middle_index, len(x), (len(x) - middle_index + 1))
     lower_x = lower_x[::-1]
 
-    for i in lower_x:
-        i = int(i)
-        if y[i] <= peak_height / 10:
-            lower_x_hm = x[i]
-            break
-    for i in higher_x:
-        i = int(i)
-        if y[i] <= peak_height / 10:
-            higher_x_hm = x[i]
-            break
-    fwtm = higher_x_hm - lower_x_hm
-    print(fwtm)
-    return fwtm
+    if len(lower_x) <= 2:
+        return 0
+    if len(higher_x) <=2:
+        return 0
+
+    else:
+        for i in lower_x:
+            if i == lower_x[-2]:
+                lower_x_hm = 0
+                break
+            else:
+                i = int(i)
+                if y[i] <= (peak_height / 10.0):
+                    lower_x_hm = x[i]
+                    break
+        for i in higher_x:
+            if i == higher_x[-2]:
+                higher_x_hm = 0
+                break
+            else:
+                i = int(i)
+                if y[i] <=(peak_height / 10.0):
+                    higher_x_hm = x[i]
+                    break
+        fwtm = higher_x_hm - lower_x_hm
+        print(fwtm)
+        return fwtm
 
 
 def FitGaussian(x, y):
@@ -431,17 +463,92 @@ def FitSkewedGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid,
 #plt.plot(x, out.best_fit, 'ro')
 #    plt.show()
     fwhm = calculatefwhm(x, out.best_fit, (out.params['g1_center'].value))
-    fwtm = calculatefwtm(x, out.best_fit, (out.params['g1_center'].value))
+    if g1_amplitude >= 20:
+        fwtm = calculatefwtm(x, out.best_fit, (out.params['g1_center'].value))
+        print("FWTM")
+        print(fwtm)
 
     print("FWHM")
     print(fwhm)
-    print("FWTM")
-    print(fwtm)
     #   plt.plot(x, y, 'bo')
     #   plt.plot(x, out.init_fit, 'k--')
     #   plt.plot(x, out.best_fit, 'r-')
     plt.show()
     return fwhm, g1_gamma, g1_center, g1_sigma, g1_amplitude, chisqr, redchi
+
+def FitSkewedGaussianPeakStepBackground(x, y, peak_amplitude, peak_centroid,
+                                          peak_sigma, peak_gamma):
+
+    peak_amplitude = int(peak_amplitude)
+    peak_centroid = int(peak_centroid)
+    peak_sigma = int(peak_sigma)
+    peak_gamma = int(peak_gamma)
+
+    bkg_mod = lmfit.models.RectangleModel(prefix='lin_')
+    step_mod = lmfit.models.RectangleModel(prefix='step_')
+
+    pars =bkg_mod.guess(y, x=x, center1=(peak_centroid - 5* peak_sigma), center2=(peak_centroid - 2* peak_sigma), sigma1 = peak_sigma, sigma2 = peak_sigma)
+    pars+=step_mod.guess(y, x=x, center1=(peak_centroid + 5* peak_sigma), center2=(peak_centroid + 2* peak_sigma), sigma1 = peak_sigma, sigma2 = peak_sigma)
+    #pars = bkg_mod.guess(y, x=x)
+
+    skewedgauss1 = lmfit.models.SkewedGaussianModel(prefix='g1_')
+    pars.update(skewedgauss1.make_params())
+
+    pars['g1_center'].set((peak_centroid), min=(peak_centroid - 200), max=(peak_centroid + 200))
+    pars['g1_sigma'].set(peak_sigma, min=0)
+    pars['g1_amplitude'].set(peak_amplitude, min=1)
+    pars['g1_gamma'].set(peak_gamma)
+
+    mod = skewedgauss1 + bkg_mod +step_mod
+    init = mod.eval(pars, x=x)
+    out = mod.fit(y, pars, x=x)
+
+    comps = out.eval_components(x=x)
+
+    print(out.params)
+    print(out.fit_report(min_correl=0.5))
+
+#    g1_fwhm = (out.params['g1_fwhm'].value)
+#    g1_fwhm_err = (out.params['g1_fwhm'].stderr)
+    g1_center = (out.params['g1_center'].value)
+    g1_sigma = (out.params['g1_sigma'].value)
+#    g1_height = (out.params['g1_height'].value)
+    g1_amplitude = (out.params['g1_amplitude'].value)
+    g1_gamma = (out.params['g1_gamma'].value)
+
+    chisqr = out.chisqr
+    redchi = out.redchi
+
+    plt.figure(figsize=(10, 5))
+
+    #plt.axis([(out.params['g1_center'].value - 2 * out.params['g1_fwhm'].value), (out.params['g1_center'].value + 2* out.params['g1_fwhm'].value), 0, (1.2* out.params['g1_height'].value)])
+    #ax = plt.gca()
+    #ax.set_autoscale_on(False)
+
+    plt.plot(x, y, 'bo')
+    plt.plot(x, out.init_fit, 'k--')
+    plt.plot(x, out.best_fit, 'r-')
+    plt.plot(x, comps['g1_'], 'b--')
+    #plt.plot(x, comps['g2_'], 'b--')
+    plt.plot(x, comps['lin_'], 'g--')
+    plt.plot(x, comps['step_'], 'c--')
+
+#plt.plot(x, out.best_fit, 'ro')
+    plt.show()
+    fwhm = calculatefwhm(x, out.best_fit, (out.params['g1_center'].value))
+    if g1_amplitude >= 20:
+         fwtm = calculatefwtm(x, out.best_fit, (out.params['g1_center'].value))
+         print("FWTM")
+         print(fwtm)
+
+    print("FWHM")
+    print(fwhm)
+    #   plt.plot(x, y, 'bo')
+    #   plt.plot(x, out.init_fit, 'k--')
+    #   plt.plot(x, out.best_fit, 'r-')
+    #plt.show()
+    return fwhm, g1_gamma, g1_center, g1_sigma, g1_amplitude, chisqr, redchi
+
 
 def FitExponentialGaussianPeakLinearBackground(x, y, peak_amplitude, peak_centroid, peak_sigma, peak_gamma):
 

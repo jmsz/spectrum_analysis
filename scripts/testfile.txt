@@ -1,21 +1,21 @@
 [[Model]]
     (Model(gaussian, prefix='g1_') + Model(linear, prefix='lin_'))
 [[Fit Statistics]]
-    # function evals   = 51
-    # data points      = 500
+    # function evals   = 39
+    # data points      = 2000
     # variables        = 5
-    chi-square         = 35686.501
-    reduced chi-square = 72.094
-    Akaike info crit   = 2143.960
-    Bayesian info crit = 2165.033
+    chi-square         = 14694.379
+    reduced chi-square = 7.366
+    Akaike info crit   = 3998.636
+    Bayesian info crit = 4026.640
 [[Variables]]
-    lin_intercept:  -0.16355874 +/- 28.04546 (17147.03%) (init=-280.4164)
-    lin_slope:       0.00068250 +/- 0.039341 (5764.25%) (init= 0.4606835)
-    g1_sigma:        0.67944811 +/- 0.002094 (0.31%) (init= 1)
-    g1_center:       713.815698 +/- 0.002053 (0.00%) (init= 713)
-    g1_amplitude:    1595.91948 +/- 4.423113 (0.28%) (init= 979)
-    g1_fwhm:         1.59997800 +/- 0.004931 (0.31%)  == '2.3548200*g1_sigma'
-    g1_height:       937.054320 +/- 2.468168 (0.26%)  == '0.3989423*g1_amplitude/max(1.e-15, g1_sigma)'
+    lin_intercept:  -0.22281336 +/- 0.889781 (399.34%) (init=-8.718586)
+    lin_slope:       0.00038951 +/- 0.001006 (258.43%) (init= 0.01851943)
+    g1_sigma:        1.32738222 +/- 0.002293 (0.17%) (init= 1)
+    g1_center:       890.928410 +/- 0.002280 (0.00%) (init= 891)
+    g1_amplitude:    1566.36565 +/- 2.371669 (0.15%) (init= 489)
+    g1_fwhm:         3.12574620 +/- 0.005401 (0.17%)  == '2.3548200*g1_sigma'
+    g1_height:       470.768334 +/- 0.701784 (0.15%)  == '0.3989423*g1_amplitude/max(1.e-15, g1_sigma)'
 [[Correlations]] (unreported correlations are <  0.100)
-    C(lin_intercept, lin_slope)  = -1.000 
-    C(g1_sigma, g1_amplitude)    =  0.600 
+    C(lin_intercept, lin_slope)  = -0.998 
+    C(g1_sigma, g1_amplitude)    =  0.584 
